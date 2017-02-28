@@ -62,6 +62,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Locale;
@@ -90,14 +92,14 @@ class ELUtil {
     private ELUtil() {
     }
     
-/*  For testing Backward Compatibility option
+    // Backward Compatibility option, false by default
     static java.util.Properties properties = new java.util.Properties();
     static {
-        properties.setProperty("javax.el.bc2.2", "true");
+        properties.setProperty("javax.el.bc2.2", Boolean.valueOf(getSystemProperty("javax.el.bc2.2", "false")).toString());
     }
-*/
+
     public static ExpressionFactory exprFactory =
-        ExpressionFactory.newInstance(/*properties*/);
+        ExpressionFactory.newInstance(properties);
 
     /**
      * <p>The <code>ThreadLocal</code> variable used to record the
@@ -303,5 +305,18 @@ class ELUtil {
         } catch (InvocationTargetException ite) {
             throw new ELException(ite.getCause());
         }
+    }
+
+    private static String getSystemProperty(final String key, final String def) {
+        final SecurityManager sm = System.getSecurityManager();
+        if (sm != null) {
+            return AccessController.doPrivileged(new PrivilegedAction<String>() {
+                @Override
+                public String run() {
+                    return System.getProperty(key, def);
+                }
+            });
+        }
+        return System.getProperty(key, def);
     }
 }
